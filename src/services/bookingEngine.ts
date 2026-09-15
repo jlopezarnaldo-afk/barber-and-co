@@ -36,15 +36,51 @@ export const getAvailableTimeSlots = (options: SlotGeneratorOptions): TimeSlotAv
   const { branchId, date, durationMinutes, barberId, customAppointments } = options;
 
   const branch = storageService.getBranches().find((b) => b.id === branchId);
-  const branchStaff = storageService.getStaff(branchId);
   const appointments = (customAppointments || storageService.getAppointments()).filter(
     (app) => app.branchId === branchId && app.date === date && app.status !== 'Cancelado'
   );
 
-  // Business hours: 10:00 to 20:00 (600 to 1200 minutes)
-  const START_HOUR_MINUTES = 10 * 60; // 10:00
-  const END_HOUR_MINUTES = 20 * 60; // 20:00
+  // Parse date day of week (0: Sun, 1: Mon, ..., 6: Sat)
+  const [y, m, d] = date.split('-').map(Number);
+  const dayOfWeek = new Date(y, m - 1, d).getDay();
+
+  // Active staff working at this branch on this date
+  const branchStaffOnDate = storageService.getStaff(branchId, date);
+
+  // Business hours: Dynamically parse from branch schedule (e.g. "Lun a Sáb de 10:00 a 20:00 hs")
+  let startHourMinutes = 10 * 60; // default 10:00
+  let endHourMinutes = 20 * 60;   // default 20:00
+  if (branch?.schedule) {
+    const match = branch.schedule.match(/(\d{1,2}):(\d{2})\s*a\s*(\d{1,2}):(\d{2})/);
+    if (match) {
+      startHourMinutes = parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+      endHourMinutes = parseInt(match[3], 10) * 60 + parseInt(match[4], 10);
+    }
+  }
+
   const SLOT_INTERVAL = 30; // 30 min intervals
+  const chairsLimit = branch ? branch.chairsCount : 3;
+
+  // Validate that requested barber belongs to this branch and works on this date
+  const requestedBarber = barberId !== 'any' ? storageService.getBarberById(barberId) : null;
+  const isBarberInBranch = requestedBarber && (
+    requestedBarber.assignedBranches
+      ? requestedBarber.assignedBranches.includes(branchId)
+      : requestedBarber.branchId === branchId
+  );
+  const isBarberActiveToday = isBarberInBranch && branchStaffOnDate.some((b) => b.id === barberId);
+  const effectiveBarberId = isBarberInBranch ? barberId : 'any';
+
+  // Specific barber working hours on this day if applicable
+  let barberStartMinutes = startHourMinutes;
+  let barberEndMinutes = endHourMinutes;
+  if (requestedBarber && requestedBarber.schedule && requestedBarber.schedule[dayOfWeek]) {
+    const barberDay = requestedBarber.schedule[dayOfWeek];
+    if (barberDay.start && barberDay.end) {
+      barberStartMinutes = Math.max(startHourMinutes, timeToMinutes(barberDay.start));
+      barberEndMinutes = Math.min(endHourMinutes, timeToMinutes(barberDay.end));
+    }
+  }
 
   const results: TimeSlotAvailability[] = [];
 
@@ -57,25 +93,24 @@ export const getAvailableTimeSlots = (options: SlotGeneratorOptions): TimeSlotAv
   const currentMinutesToday = now.getHours() * 60 + now.getMinutes();
 
   for (
-    let slotStart = START_HOUR_MINUTES;
-    slotStart < END_HOUR_MINUTES;
+    let slotStart = startHourMinutes;
+    slotStart < endHourMinutes;
     slotStart += SLOT_INTERVAL
   ) {
     const slotEnd = slotStart + durationMinutes;
     const timeString = minutesToTime(slotStart);
 
-    // Rule 1: Cannot finish after closing time (20:00)
-    if (slotEnd > END_HOUR_MINUTES) {
+    // Rule 1: Cannot finish after branch closing time
+    if (slotEnd > endHourMinutes) {
       results.push({
         time: timeString,
         available: false,
-        reason: 'Supera el horario de cierre (20:00 hs)',
+        reason: `Supera el horario de cierre (${minutesToTime(endHourMinutes)} hs)`,
       });
       continue;
     }
 
     // Rule 2: Past slots today
-    // Allow a small grace margin or disable past slots
     if (isToday && slotStart <= currentMinutesToday) {
       results.push({
         time: timeString,
@@ -85,11 +120,48 @@ export const getAvailableTimeSlots = (options: SlotGeneratorOptions): TimeSlotAv
       continue;
     }
 
+    // Check chair capacity across the branch during this interval
+    const overlappingAppointmentsCount = appointments.filter((app) => {
+      const appStart = timeToMinutes(app.timeSlot);
+      const appEnd = appStart + app.durationMinutes;
+      return doIntervalsOverlap(slotStart, slotEnd, appStart, appEnd);
+    }).length;
+
     // Rule 3: Specific Barber vs Any Available
-    if (barberId !== 'any') {
+    if (effectiveBarberId !== 'any') {
+      // Chair limit check applies globally to branch capacity first
+      if (overlappingAppointmentsCount >= chairsLimit) {
+        results.push({
+          time: timeString,
+          available: false,
+          reason: 'Capacidad máxima de sillas alcanzada',
+        });
+        continue;
+      }
+
+      // If barber is off today (franco or not scheduled in this branch)
+      if (!isBarberActiveToday) {
+        results.push({
+          time: timeString,
+          available: false,
+          reason: 'Barbero no disponible hoy (franco / otra sede)',
+        });
+        continue;
+      }
+
+      // If slot is outside barber's working hours
+      if (slotStart < barberStartMinutes || slotEnd > barberEndMinutes) {
+        results.push({
+          time: timeString,
+          available: false,
+          reason: `Fuera del horario de ${requestedBarber?.name || 'barbero'}`,
+        });
+        continue;
+      }
+
       // Check if this specific barber has conflicting appointments
       const conflictingAppointment = appointments.find((app) => {
-        if (app.barberId !== barberId && app.barberId !== 'any') return false;
+        if (app.barberId !== effectiveBarberId) return false;
         const appStart = timeToMinutes(app.timeSlot);
         const appEnd = appStart + app.durationMinutes;
         return doIntervalsOverlap(slotStart, slotEnd, appStart, appEnd);
@@ -105,13 +177,20 @@ export const getAvailableTimeSlots = (options: SlotGeneratorOptions): TimeSlotAv
         results.push({
           time: timeString,
           available: true,
-          assignedBarberId: barberId,
+          assignedBarberId: effectiveBarberId,
         });
       }
     } else {
       // "Cualquiera disponible":
-      // Find at least one barber in this branch who is free for the entire duration
-      const availableBarber = branchStaff.find((barber) => {
+      // Find at least one barber active today in this branch who is within working hours and free
+      const availableBarber = branchStaffOnDate.find((barber) => {
+        const barberDay = barber.schedule ? barber.schedule[dayOfWeek] : null;
+        if (barberDay && barberDay.start && barberDay.end) {
+          const bStart = Math.max(startHourMinutes, timeToMinutes(barberDay.start));
+          const bEnd = Math.min(endHourMinutes, timeToMinutes(barberDay.end));
+          if (slotStart < bStart || slotEnd > bEnd) return false;
+        }
+
         const hasConflict = appointments.some((app) => {
           if (app.barberId !== barber.id) return false;
           const appStart = timeToMinutes(app.timeSlot);
@@ -120,15 +199,6 @@ export const getAvailableTimeSlots = (options: SlotGeneratorOptions): TimeSlotAv
         });
         return !hasConflict;
       });
-
-      // Also check chairs count limit
-      const overlappingAppointmentsCount = appointments.filter((app) => {
-        const appStart = timeToMinutes(app.timeSlot);
-        const appEnd = appStart + app.durationMinutes;
-        return doIntervalsOverlap(slotStart, slotEnd, appStart, appEnd);
-      }).length;
-
-      const chairsLimit = branch ? branch.chairsCount : 3;
 
       if (availableBarber && overlappingAppointmentsCount < chairsLimit) {
         results.push({
@@ -140,7 +210,9 @@ export const getAvailableTimeSlots = (options: SlotGeneratorOptions): TimeSlotAv
         results.push({
           time: timeString,
           available: false,
-          reason: 'Sillas ocupadas / Sin barbero libre',
+          reason: overlappingAppointmentsCount >= chairsLimit
+            ? 'Capacidad máxima de sillas alcanzada'
+            : 'Sin barbero disponible en este horario',
         });
       }
     }

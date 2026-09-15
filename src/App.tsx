@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { UserRole, Service, Branch, BranchId } from './types';
 import { storageService } from './services/storageService';
 import { Navbar } from './components/Navbar';
@@ -17,13 +17,38 @@ export function App() {
   const [currentRole, setCurrentRole] = useState<UserRole>(() => storageService.getSessionRole());
   const [isPinModalOpen, setIsPinModalOpen] = useState<boolean>(false);
 
+  // Active branch selected across Hero and Service Catalog
+  const [activeBranchId, setActiveBranchId] = useState<BranchId>('palermo');
+
   // Preselections for booking wizard
-  const [preselectedBranch, setPreselectedBranch] = useState<BranchId | undefined>(undefined);
+  const [preselectedBranch, setPreselectedBranch] = useState<BranchId | undefined>('palermo');
   const [preselectedService, setPreselectedService] = useState<string | undefined>(undefined);
 
   // App data
   const [services, setServices] = useState<Service[]>(() => storageService.getServices());
   const [branches, setBranches] = useState<Branch[]>(() => storageService.getBranches());
+
+  // Listen to cross-component and cross-tab service price/duration updates
+  useEffect(() => {
+    const handleServicesUpdated = () => {
+      setServices(storageService.getServices());
+      setBranches(storageService.getBranches());
+    };
+    const handleStorageEvent = (e: StorageEvent) => {
+      if (!e.key || e.key === 'barber_services') {
+        setServices(storageService.getServices());
+      }
+      if (!e.key || e.key === 'barber_branches') {
+        setBranches(storageService.getBranches());
+      }
+    };
+    window.addEventListener('barber_services_updated', handleServicesUpdated);
+    window.addEventListener('storage', handleStorageEvent);
+    return () => {
+      window.removeEventListener('barber_services_updated', handleServicesUpdated);
+      window.removeEventListener('storage', handleStorageEvent);
+    };
+  }, []);
 
   const handleRoleChange = (role: UserRole) => {
     storageService.setSessionRole(role);
@@ -33,16 +58,18 @@ export function App() {
     setBranches(storageService.getBranches());
   };
 
-  const handleSelectService = (service: Service) => {
-    setPreselectedService(service.id);
+  const handleSelectBranch = (branchId: BranchId) => {
+    setActiveBranchId(branchId);
+    setPreselectedBranch(branchId);
     const element = document.getElementById('reservar');
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
-  const handleSelectBranch = (branchId: BranchId) => {
-    setPreselectedBranch(branchId);
+  const handleSelectService = (service: Service) => {
+    setPreselectedService(service.id);
+    setPreselectedBranch(activeBranchId);
     const element = document.getElementById('reservar');
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
@@ -64,7 +91,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-amber-500 selection:text-zinc-950">
+    <div className="min-h-screen bg-[#ECE7DE] text-[#141210] font-sans selection:bg-[#DDD6C8] selection:text-[#141210] overflow-x-hidden">
       {/* Global Navbar */}
       <Navbar
         currentRole={currentRole}
@@ -81,10 +108,26 @@ export function App() {
       ) : (
         <main>
           {/* Hero Section */}
-          <Hero onStartBooking={scrollToBooking} onExploreServices={scrollToServices} />
+          <Hero
+            activeBranchId={activeBranchId}
+            onSelectBranch={(branchId) => {
+              setActiveBranchId(branchId);
+              setPreselectedBranch(branchId);
+            }}
+            onStartBooking={scrollToBooking}
+            onExploreServices={scrollToServices}
+          />
 
           {/* Services Catalog */}
-          <ServiceCatalog services={services} onSelectService={handleSelectService} />
+          <ServiceCatalog
+            services={services}
+            activeBranchId={activeBranchId}
+            onSelectService={handleSelectService}
+            onSelectBranch={(branchId) => {
+              setActiveBranchId(branchId);
+              setPreselectedBranch(branchId);
+            }}
+          />
 
           {/* Interactive Booking Wizard */}
           <BookingWizard

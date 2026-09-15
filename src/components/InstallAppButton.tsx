@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Download, Share, PlusSquare, X, Smartphone, CheckCircle2 } from 'lucide-react';
+import { Share, PlusSquare, X, Smartphone, CheckCircle2 } from 'lucide-react';
 
 // Global variable to capture beforeinstallprompt outside React cycle
 let deferredPrompt: any = null;
@@ -12,12 +12,12 @@ if (typeof window !== 'undefined') {
 }
 
 interface InstallAppButtonProps {
-  variant?: 'nav' | 'hero' | 'floating';
+  variant?: 'nav' | 'hero' | 'floating' | 'text';
   className?: string;
 }
 
 export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
-  variant = 'nav',
+  variant = 'text',
   className = '',
 }) => {
   const [isStandalone, setIsStandalone] = useState<boolean>(() => {
@@ -51,11 +51,11 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
 
   // If already installed, hide or show subtle installed badge
   if (isStandalone) {
-    if (variant === 'nav') {
+    if (variant === 'nav' || variant === 'text') {
       return (
-        <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900 border border-emerald-800/40 text-emerald-400 text-xs font-medium">
-          <CheckCircle2 className="w-3.5 h-3.5" />
-          <span>App Instalada</span>
+        <div className="hidden sm:inline-flex items-center gap-1.5 px-2 py-1 text-xs text-[#141210]/60">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+          <span>App instalada</span>
         </div>
       );
     }
@@ -83,86 +83,89 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
 
   const getButtonStyles = () => {
     switch (variant) {
+      case 'text':
+        return 'inline-flex items-center text-xs sm:text-sm font-medium text-[#141210]/70 hover:text-[#141210] underline-offset-4 hover:underline min-h-[44px] px-2 transition-colors';
       case 'hero':
-        return 'inline-flex items-center justify-center gap-2.5 px-6 py-3.5 min-h-[44px] rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-amber-500/50 text-zinc-100 font-semibold shadow-lg shadow-zinc-950/50 transition-all duration-200 active:scale-98';
+        return 'inline-flex items-center justify-center min-h-[44px] px-5 py-3 border border-[#141210]/20 text-[#141210] rounded-[2px] text-xs sm:text-sm font-medium hover:bg-[#141210]/5 transition-colors';
       case 'floating':
-        return 'fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 px-4 py-3 min-h-[44px] rounded-full bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold shadow-2xl shadow-amber-500/30 transition-all duration-200 active:scale-95';
+        return 'fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 px-5 py-3 min-h-[44px] rounded-[2px] bg-[#141210] text-[#ECE7DE] font-medium text-xs shadow-lg transition-colors';
       case 'nav':
       default:
-        return 'inline-flex items-center gap-2 px-3.5 py-2 min-h-[44px] rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 hover:border-amber-500/60 text-zinc-200 hover:text-amber-400 text-xs sm:text-sm font-semibold transition-all duration-150';
+        return 'inline-flex items-center justify-center text-xs sm:text-sm font-medium text-[#141210]/70 hover:text-[#141210] underline-offset-4 hover:underline min-h-[44px] px-2 transition-colors';
     }
   };
 
   return (
     <>
       <button
+        type="button"
         onClick={handleInstallClick}
-        className={`${getButtonStyles()} ${className}`}
-        title="Instalar App Móvil"
+        className={`${getButtonStyles()} cursor-pointer ${className}`}
+        title="Bajar app"
       >
-        <Download className="w-4 h-4 text-amber-500 shrink-0" />
-        <span>Bajar App</span>
+        <span>Bajar app</span>
       </button>
 
       {/* iOS & Manual Installation Instruction Modal */}
       {showIOSModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-md animate-fadeIn">
-          <div className="relative w-full max-w-md p-6 bg-zinc-900 border border-zinc-700/80 rounded-2xl shadow-2xl text-zinc-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#141210]/60 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-md p-6 bg-[#ECE7DE] border border-[#141210]/20 rounded-[2px] shadow-2xl text-[#141210]">
             <button
               onClick={() => setShowIOSModal(false)}
-              className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded-lg transition-colors"
+              className="absolute top-4 right-4 p-2 text-[#141210]/60 hover:text-[#141210] rounded-[2px] transition-colors cursor-pointer"
+              aria-label="Cerrar"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-zinc-950 shadow-md">
-                <Smartphone className="w-6 h-6" />
+              <div className="w-10 h-10 rounded-[2px] border border-[#141210]/20 flex items-center justify-center text-[#141210]">
+                <Smartphone className="w-5 h-5 stroke-[1.75]" />
               </div>
               <div>
-                <h3 className="font-bold text-lg text-zinc-100">
+                <h3 className="font-serif font-bold text-lg text-[#141210]">
                   {isIOS ? 'Instalar en tu iPhone' : 'Instalar Barber & Co.'}
                 </h3>
-                <p className="text-xs text-zinc-400">Acceso instantáneo con 1 toque sin App Store</p>
+                <p className="text-xs text-[#141210]/70">Acceso instantáneo sin pasar por la tienda de apps</p>
               </div>
             </div>
 
-            <div className="space-y-4 my-6 text-sm">
-              <div className="flex items-start gap-3.5 p-3.5 bg-zinc-950/70 border border-zinc-800 rounded-xl">
-                <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center text-amber-400 shrink-0 font-bold text-sm">
+            <div className="space-y-3 my-6 text-sm">
+              <div className="flex items-start gap-3.5 p-3.5 bg-[#DDD6C8]/50 border border-[#141210]/10 rounded-[2px]">
+                <div className="w-6 h-6 rounded-[2px] bg-[#141210] text-[#ECE7DE] flex items-center justify-center shrink-0 font-bold text-xs">
                   1
                 </div>
                 <div>
-                  <p className="font-semibold text-zinc-200">Presiona Compartir</p>
-                  <p className="text-xs text-zinc-400 mt-0.5">
+                  <p className="font-semibold text-xs sm:text-sm text-[#141210]">Presiona Compartir</p>
+                  <p className="text-xs text-[#141210]/70 mt-0.5">
                     En la barra inferior de Safari, toca el botón de Compartir{' '}
-                    <Share className="w-3.5 h-3.5 inline-block text-amber-400 mx-0.5" />.
+                    <Share className="w-3.5 h-3.5 inline-block text-[#141210] mx-0.5" />.
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3.5 p-3.5 bg-zinc-950/70 border border-zinc-800 rounded-xl">
-                <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center text-amber-400 shrink-0 font-bold text-sm">
+              <div className="flex items-start gap-3.5 p-3.5 bg-[#DDD6C8]/50 border border-[#141210]/10 rounded-[2px]">
+                <div className="w-6 h-6 rounded-[2px] bg-[#141210] text-[#ECE7DE] flex items-center justify-center shrink-0 font-bold text-xs">
                   2
                 </div>
                 <div>
-                  <p className="font-semibold text-zinc-200">Agregar a inicio</p>
-                  <p className="text-xs text-zinc-400 mt-0.5">
+                  <p className="font-semibold text-xs sm:text-sm text-[#141210]">Agregar a inicio</p>
+                  <p className="text-xs text-[#141210]/70 mt-0.5">
                     Baja en las opciones y selecciona{' '}
-                    <span className="text-zinc-200 font-medium">"Agregar a pantalla de inicio"</span>{' '}
-                    <PlusSquare className="w-3.5 h-3.5 inline-block text-amber-400 mx-0.5" />.
+                    <span className="font-medium">"Agregar a pantalla de inicio"</span>{' '}
+                    <PlusSquare className="w-3.5 h-3.5 inline-block text-[#141210] mx-0.5" />.
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3.5 p-3.5 bg-zinc-950/70 border border-zinc-800 rounded-xl">
-                <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center text-amber-400 shrink-0 font-bold text-sm">
+              <div className="flex items-start gap-3.5 p-3.5 bg-[#DDD6C8]/50 border border-[#141210]/10 rounded-[2px]">
+                <div className="w-6 h-6 rounded-[2px] bg-[#141210] text-[#ECE7DE] flex items-center justify-center shrink-0 font-bold text-xs">
                   3
                 </div>
                 <div>
-                  <p className="font-semibold text-zinc-200">¡Listo!</p>
-                  <p className="text-xs text-zinc-400 mt-0.5">
-                    Tendrás el icono de Barber & Co. junto a tus apps nativas, con recordatorios y acceso directo.
+                  <p className="font-semibold text-xs sm:text-sm text-[#141210]">Confirmar</p>
+                  <p className="text-xs text-[#141210]/70 mt-0.5">
+                    El icono quedará agregado con acceso directo a tus turnos.
                   </p>
                 </div>
               </div>
@@ -170,7 +173,7 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
 
             <button
               onClick={() => setShowIOSModal(false)}
-              className="w-full py-3 min-h-[44px] rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm transition-all"
+              className="w-full py-3 min-h-[44px] rounded-[2px] bg-[#141210] hover:bg-[#141210]/90 text-[#ECE7DE] font-medium text-xs sm:text-sm transition-colors cursor-pointer"
             >
               Entendido, volver
             </button>
@@ -180,3 +183,4 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
     </>
   );
 };
+

@@ -113,42 +113,44 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/85 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#141210]/60 backdrop-blur-sm animate-fadeIn overflow-y-auto">
       <div
-        className={`relative w-full max-w-sm p-6 bg-zinc-900 border ${
-          hasError ? 'border-rose-500 animate-shake' : 'border-zinc-800'
-        } rounded-2xl shadow-2xl text-zinc-100 transition-all duration-150`}
+        className={`relative w-full max-w-sm max-h-[94dvh] overflow-y-auto p-4 sm:p-6 bg-[#ECE7DE] border ${
+          hasError ? 'border-rose-600 animate-shake' : 'border-[#141210]/20'
+        } rounded-[2px] shadow-2xl text-[#141210] transition-all duration-150 my-auto`}
       >
         {/* Close Button */}
         <button
+          type="button"
           onClick={handleClose}
-          className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded-lg transition-colors"
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 text-[#141210]/60 hover:text-[#141210] rounded-[2px] transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
           title="Cerrar"
+          aria-label="Cerrar"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Header Badge */}
-        <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-3 shadow-inner">
-            <Lock className="w-7 h-7" />
+        <div className="flex flex-col items-center text-center mb-3 sm:mb-4 pt-1 sm:pt-0">
+          <div className="w-10 h-10 rounded-[2px] border border-[#141210]/20 flex items-center justify-center text-[#141210] mb-2">
+            <Lock className="w-5 h-5 stroke-[1.75]" />
           </div>
-          <h3 className="text-xl font-bold text-zinc-100 tracking-tight">Acceso Personal</h3>
-          <p className="text-xs text-zinc-400 mt-1">Terminal de Seguridad Barber &amp; Co.</p>
+          <h3 className="font-serif text-lg sm:text-xl font-bold text-[#141210] tracking-tight">Acceso Personal</h3>
+          <p className="text-[11px] sm:text-xs text-[#141210]/60 mt-0.5">Terminal de seguridad Barber &amp; Co.</p>
         </div>
 
         {/* PIN Indicators */}
-        <div className="flex justify-center items-center gap-4 mb-5">
+        <div className="flex justify-center items-center gap-3.5 mb-3 sm:mb-4">
           {[0, 1, 2, 3].map((index) => {
             const isFilled = index < pin.length;
             return (
               <div
                 key={index}
-                className={`w-4 h-4 rounded-full transition-all duration-200 ${
+                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-[2px] transition-all duration-200 border ${
                   isFilled
-                    ? 'bg-amber-500 scale-110 shadow-lg shadow-amber-500/50'
-                    : 'bg-zinc-800 border border-zinc-700'
-                } ${hasError ? '!bg-rose-500 !shadow-rose-500/50' : ''}`}
+                    ? 'bg-[#141210] border-[#141210]'
+                    : 'bg-[#DDD6C8] border-[#141210]/20'
+                } ${hasError ? '!bg-rose-600 !border-rose-600' : ''}`}
               />
             );
           })}
@@ -156,19 +158,20 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
 
         {/* Error Notification */}
         {hasError && (
-          <div className="flex items-center justify-center gap-1.5 text-xs text-rose-400 font-medium mb-3">
+          <div className="flex items-center justify-center gap-1.5 text-xs text-rose-700 font-medium mb-2.5 animate-fadeIn">
             <ShieldAlert className="w-4 h-4 shrink-0" />
             <span>{errorMessage}</span>
           </div>
         )}
 
         {/* Keypad Grid */}
-        <div className="grid grid-cols-3 gap-2.5 my-4">
+        <div className="grid grid-cols-3 gap-2 my-2 sm:my-3">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
             <button
               key={num}
+              type="button"
               onClick={() => handleKeyPress(String(num))}
-              className="min-h-[52px] rounded-xl bg-zinc-950/80 hover:bg-zinc-800 border border-zinc-800/80 hover:border-amber-500/40 text-xl font-bold text-zinc-100 active:scale-95 transition-all duration-100 flex items-center justify-center select-none"
+              className="min-h-[44px] sm:min-h-[48px] rounded-[2px] bg-[#DDD6C8]/60 hover:bg-[#DDD6C8] border border-[#141210]/25 text-lg sm:text-xl font-bold text-[#141210] active:scale-95 transition-all duration-100 flex items-center justify-center select-none cursor-pointer"
             >
               {num}
             </button>
@@ -176,25 +179,29 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
 
           {/* Clear Button */}
           <button
+            type="button"
             onClick={handleClear}
-            className="min-h-[52px] rounded-xl bg-zinc-950/40 hover:bg-zinc-800/80 border border-zinc-800/60 text-xs font-semibold text-zinc-400 hover:text-zinc-200 active:scale-95 transition-all flex items-center justify-center select-none"
+            className="min-h-[44px] sm:min-h-[48px] rounded-[2px] bg-[#DDD6C8]/40 hover:bg-[#DDD6C8] border border-[#141210]/25 text-xs font-semibold text-[#141210]/70 hover:text-[#141210] active:scale-95 transition-all flex items-center justify-center select-none cursor-pointer"
           >
             Limpiar
           </button>
 
           {/* Zero */}
           <button
+            type="button"
             onClick={() => handleKeyPress('0')}
-            className="min-h-[52px] rounded-xl bg-zinc-950/80 hover:bg-zinc-800 border border-zinc-800/80 hover:border-amber-500/40 text-xl font-bold text-zinc-100 active:scale-95 transition-all duration-100 flex items-center justify-center select-none"
+            className="min-h-[44px] sm:min-h-[48px] rounded-[2px] bg-[#DDD6C8]/60 hover:bg-[#DDD6C8] border border-[#141210]/25 text-lg sm:text-xl font-bold text-[#141210] active:scale-95 transition-all duration-100 flex items-center justify-center select-none cursor-pointer"
           >
             0
           </button>
 
           {/* Delete Single */}
           <button
+            type="button"
             onClick={handleDelete}
-            className="min-h-[52px] rounded-xl bg-zinc-950/40 hover:bg-zinc-800/80 border border-zinc-800/60 text-zinc-400 hover:text-zinc-100 active:scale-95 transition-all flex items-center justify-center select-none"
+            className="min-h-[44px] sm:min-h-[48px] rounded-[2px] bg-[#DDD6C8]/40 hover:bg-[#DDD6C8] border border-[#141210]/25 text-[#141210]/70 hover:text-[#141210] active:scale-95 transition-all flex items-center justify-center select-none cursor-pointer"
             title="Borrar dígito"
+            aria-label="Borrar dígito"
           >
             <Delete className="w-5 h-5" />
           </button>
@@ -202,33 +209,36 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
 
         {/* Enter Action */}
         <button
+          type="button"
           onClick={handleSubmit}
-          className="w-full mt-2 py-3 min-h-[46px] rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-bold text-sm tracking-wide flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 active:scale-98 transition-all"
+          className="w-full mt-1.5 py-2.5 min-h-[44px] rounded-[2px] bg-[#141210] hover:bg-[#141210]/90 text-[#ECE7DE] font-medium text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer"
         >
-          <span>Ingresar al Sistema</span>
+          <span>Ingresar al sistema</span>
           <ArrowRight className="w-4 h-4" />
         </button>
 
         {/* Quick Demo Access Bar */}
-        <div className="mt-5 pt-4 border-t border-zinc-800/80">
-          <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 mb-2">
-            <KeyRound className="w-3.5 h-3.5 text-amber-500" />
-            <span className="font-semibold text-zinc-300">Accesos directos de demostración:</span>
+        <div className="mt-3.5 pt-3 border-t border-[#141210]/25">
+          <div className="flex items-center gap-1.5 text-[11px] text-[#141210]/70 mb-1.5">
+            <KeyRound className="w-3.5 h-3.5" />
+            <span className="font-semibold text-[#141210]">Accesos directos de demostración:</span>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <button
+              type="button"
               onClick={() => validatePin('1111')}
-              className="p-2 rounded-lg bg-zinc-950 border border-zinc-800 hover:border-amber-500/40 text-left transition-colors"
+              className="p-2 min-h-[44px] rounded-[2px] bg-[#DDD6C8]/40 border border-[#141210]/25 hover:bg-[#DDD6C8] text-left transition-colors cursor-pointer flex flex-col justify-center"
             >
-              <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Barbero</div>
-              <div className="font-bold text-amber-400">PIN 1111</div>
+              <div className="text-[10px] tracking-wider text-[#141210]/60 font-medium">Barbero</div>
+              <div className="font-bold text-[#141210]">PIN 1111</div>
             </button>
             <button
+              type="button"
               onClick={() => validatePin('9999')}
-              className="p-2 rounded-lg bg-zinc-950 border border-zinc-800 hover:border-amber-500/40 text-left transition-colors"
+              className="p-2 min-h-[44px] rounded-[2px] bg-[#DDD6C8]/40 border border-[#141210]/25 hover:bg-[#DDD6C8] text-left transition-colors cursor-pointer flex flex-col justify-center"
             >
-              <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Dueño / Admin</div>
-              <div className="font-bold text-emerald-400">PIN 9999</div>
+              <div className="text-[10px] tracking-wider text-[#141210]/60 font-medium">Dueño / Admin</div>
+              <div className="font-bold text-[#141210]">PIN 9999</div>
             </button>
           </div>
         </div>

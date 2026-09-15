@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node test_verification.js && npx tsx test_e2e_dataset.js"
+    "test": "node test_verification.js && npx tsx test_e2e_dataset.js && npx tsx test_full_review.js && npx tsx test_pre_deploy_fixes.js"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

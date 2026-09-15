@@ -1,10 +1,11 @@
-import type { Appointment, Barber, Branch, Service, UserRole } from '../types';
+import type { Appointment, Barber, BarberSettings, Branch, BranchId, Service, UserRole } from '../types';
 
 const STORAGE_KEYS = {
   BRANCHES: 'barber_branches',
   STAFF: 'barber_staff',
   SERVICES: 'barber_services',
   APPOINTMENTS: 'barber_appointments',
+  SETTINGS: 'barber_settings',
   SESSION_ROLE: 'barber_session_role',
 };
 
@@ -18,6 +19,30 @@ export const getDateString = (offsetDays: number = 0): string => {
   return `${year}-${month}-${day}`;
 };
 
+// Normalize Argentine phone numbers for WhatsApp wa.me links
+export const normalizeWhatsAppPhone = (phone: string): string => {
+  const digits = phone.replace(/\D/g, '');
+  if (!digits) return '5491148201122';
+  // If already starts with Argentina country code (54)
+  if (digits.startsWith('54')) {
+    // If it starts with 54 but not 549 and is mobile (e.g. 5411...)
+    if (!digits.startsWith('549') && digits.length === 12) {
+      return `549${digits.slice(2)}`;
+    }
+    return digits;
+  }
+  // If 10 digits (e.g., 1155223344 or 1121503344)
+  if (digits.length === 10) {
+    return `549${digits}`;
+  }
+  // If starts with 9 and 10 digits
+  if (digits.startsWith('9') && digits.length === 11) {
+    return `54${digits}`;
+  }
+  // Fallback prepend 549
+  return `549${digits}`;
+};
+
 // Helper for Argentine Pesos formatting
 export const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('es-AR', {
@@ -29,363 +54,42 @@ export const formatCurrency = (amount: number): string => {
 
 // Helper to format duration string
 export const formatDuration = (minutes: number): string => {
-  if (minutes === 60) return '⏱️ 1 hora';
+  if (minutes === 60) return '1 hora';
   if (minutes > 60) {
     const hours = Math.floor(minutes / 60);
     const rest = minutes % 60;
-    return `⏱️ ${hours} h ${rest > 0 ? `${rest} m` : ''}`;
+    return `${hours} h ${rest > 0 ? `${rest} m` : ''}`;
   }
-  return `⏱️ ${minutes} min`;
+  return `${minutes} min`;
 };
 
-// INITIAL MOCK DATASETS
-const DEFAULT_BRANCHES: Branch[] = [
-  {
-    id: 'palermo',
-    name: 'Sede Palermo Soho',
-    address: 'Honduras 4820',
-    phone: '+54 9 11 4820-1122',
-    schedule: 'Lun a Sáb de 10:00 a 20:00 hs',
-    chairsCount: 4,
-    neighborhood: 'Palermo Soho, CABA',
-    image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'belgrano',
-    name: 'Sede Belgrano R',
-    address: 'Av. Juramento 2150',
-    phone: '+54 9 11 2150-3344',
-    schedule: 'Lun a Sáb de 10:00 a 20:00 hs',
-    chairsCount: 3,
-    neighborhood: 'Belgrano R, CABA',
-    image: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'recoleta',
-    name: 'Sede Recoleta',
-    address: 'Av. Santa Fe 1420',
-    phone: '+54 9 11 1420-5566',
-    schedule: 'Lun a Sáb de 10:00 a 20:00 hs',
-    chairsCount: 3,
-    neighborhood: 'Recoleta, CABA',
-    image: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=800&q=80',
-  },
-];
-
-const DEFAULT_STAFF: Barber[] = [
-  {
-    id: 'barber-1',
-    name: 'Facundo Gómez',
-    branchId: 'palermo',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-    rating: 4.9,
-    reviewsCount: 142,
-    specialties: ['Fade & Degradé', 'Navaja Libre', 'Diseño de Barba'],
-    phone: '+54 9 11 4820-1122',
-  },
-  {
-    id: 'barber-2',
-    name: 'Enzo Rossi',
-    branchId: 'palermo',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
-    rating: 4.9,
-    reviewsCount: 98,
-    specialties: ['Corte Clásico', 'Afeitado Tradicional Toalla Caliente'],
-    phone: '+54 9 11 4820-1122',
-  },
-  {
-    id: 'barber-3',
-    name: 'Matías Silva',
-    branchId: 'belgrano',
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
-    rating: 4.8,
-    reviewsCount: 115,
-    specialties: ['Coloración & Canas', 'Tratamientos Keratina', 'Texturizado'],
-    phone: '+54 9 11 2150-3344',
-  },
-  {
-    id: 'barber-4',
-    name: 'Lucas Méndez',
-    branchId: 'belgrano',
-    avatarUrl: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=400&q=80',
-    rating: 5.0,
-    reviewsCount: 168,
-    specialties: ['Skin Fade Precisión', 'Combo Barba Completa', 'Diseño de Cejas'],
-    phone: '+54 9 11 2150-3344',
-  },
-  {
-    id: 'barber-5',
-    name: 'Joaquín Varela',
-    branchId: 'recoleta',
-    avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=400&q=80',
-    rating: 4.9,
-    reviewsCount: 134,
-    specialties: ['Corte Ejecutivo', 'Barba Esculpida', 'Tratamiento Capilar'],
-    phone: '+54 9 11 1420-5566',
-  },
-  {
-    id: 'barber-6',
-    name: 'Tomás Benítez',
-    branchId: 'recoleta',
-    avatarUrl: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=400&q=80',
-    rating: 4.8,
-    reviewsCount: 89,
-    specialties: ['Degradé Moderno', 'Limpieza Facial Express', 'Pompadour'],
-    phone: '+54 9 11 1420-5566',
-  },
-];
-
-const DEFAULT_SERVICES: Service[] = [
-  {
-    id: 'serv-1',
-    name: 'Corte Clásico / Degradé (Fade)',
-    category: 'Corte',
-    durationMinutes: 30,
-    price: 12000,
-    description: 'Diagnóstico de visagismo, corte con tijera o máquina, lavado premium, toalla fresca y peinado final.',
-    popular: true,
-  },
-  {
-    id: 'serv-2',
-    name: 'Perfilado y Afeitado Tradicional de Barba',
-    category: 'Barba',
-    durationMinutes: 30,
-    price: 9000,
-    description: 'Ritual con doble toalla caliente infusionada con eucalipto, espuma cremosa, afeitado a navaja y bálsamo hidratante.',
-    popular: false,
-  },
-  {
-    id: 'serv-3',
-    name: 'Combo Corte + Barba Completa',
-    category: 'Combos',
-    durationMinutes: 45,
-    price: 18000,
-    description: 'Nuestra experiencia insignia. Corte completo personalizado + perfilado minucioso de barba con toalla caliente y styling.',
-    popular: true,
-  },
-  {
-    id: 'serv-4',
-    name: 'Alisado Progresivo / Keratina Capilar',
-    category: 'Tratamientos',
-    durationMinutes: 60,
-    price: 26000,
-    description: 'Tratamiento anti-frizz de nutrición intensa a base de aminoácidos y keratina. Suavidad y brillo duradero hasta 3 meses.',
-    popular: false,
-  },
-  {
-    id: 'serv-5',
-    name: 'Coloración / Camuflaje de Canas',
-    category: 'Tratamientos',
-    durationMinutes: 45,
-    price: 15000,
-    description: 'Tonalización sutil y natural sin efecto raíz. Matiza las canas de barba o cabello devolviendo vigor en minutos.',
-    popular: false,
-  },
-  {
-    id: 'serv-6',
-    name: 'Limpieza Facial Express',
-    category: 'Tratamientos',
-    durationMinutes: 20,
-    price: 8000,
-    description: 'Exfoliación suave con microesferas, vapor de ozono purificante, máscara de arcilla negra y serum antioxidante.',
-    popular: false,
-  },
-];
-
-// GENERATE INITIAL 12 HYPERREALISTIC APPOINTMENTS
-const generateDefaultAppointments = (): Appointment[] => {
-  const today = getDateString(0);
-  const tomorrow = getDateString(1);
-  const dayAfter = getDateString(2);
-
-  return [
-    // TODAY
-    {
-      id: '#TUR-1041',
-      branchId: 'palermo',
-      serviceId: 'serv-1',
-      barberId: 'barber-1',
-      clientName: 'Ignacio Pérez',
-      clientPhone: '+54 9 11 5521-8833',
-      date: today,
-      timeSlot: '10:00',
-      durationMinutes: 30,
-      price: 12000,
-      status: 'Atendido',
-      notes: 'Fade alto con textura arriba.',
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-    },
-    {
-      id: '#TUR-1042',
-      branchId: 'palermo',
-      serviceId: 'serv-3',
-      barberId: 'barber-1',
-      clientName: 'Rodrigo Morales',
-      clientPhone: '+54 9 11 6789-2244',
-      date: today,
-      timeSlot: '11:00',
-      durationMinutes: 45,
-      price: 18000,
-      status: 'Confirmado',
-      notes: 'Tiene evento a la noche. Cuidar largo de la barba.',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: '#TUR-1043',
-      branchId: 'palermo',
-      serviceId: 'serv-2',
-      barberId: 'barber-2',
-      clientName: 'Federico Álvarez',
-      clientPhone: '+54 9 11 4432-9901',
-      date: today,
-      timeSlot: '11:30',
-      durationMinutes: 30,
-      price: 9000,
-      status: 'Confirmado',
-      notes: 'Piel sensible en cuello.',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: '#TUR-1044',
-      branchId: 'palermo',
-      serviceId: 'serv-4',
-      barberId: 'barber-2',
-      clientName: 'Santiago Benítez',
-      clientPhone: '+54 9 11 9988-7711',
-      date: today,
-      timeSlot: '15:00',
-      durationMinutes: 60,
-      price: 26000,
-      status: 'Confirmado',
-      notes: 'Repite keratina semestral.',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: '#TUR-1045',
-      branchId: 'belgrano',
-      serviceId: 'serv-3',
-      barberId: 'barber-4',
-      clientName: 'Nicolás Rossi',
-      clientPhone: '+54 9 11 3322-1144',
-      date: today,
-      timeSlot: '12:00',
-      durationMinutes: 45,
-      price: 18000,
-      status: 'Atendido',
-      notes: 'Primera vez en Sede Belgrano.',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: '#TUR-1046',
-      branchId: 'belgrano',
-      serviceId: 'serv-1',
-      barberId: 'barber-3',
-      clientName: 'Martín Castelli',
-      clientPhone: '+54 9 11 8877-6655',
-      date: today,
-      timeSlot: '16:30',
-      durationMinutes: 30,
-      price: 12000,
-      status: 'Confirmado',
-      notes: 'Corte a tijera en los laterales.',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: '#TUR-1047',
-      branchId: 'recoleta',
-      serviceId: 'serv-5',
-      barberId: 'barber-5',
-      clientName: 'Mariano Díaz',
-      clientPhone: '+54 9 11 2233-4455',
-      date: today,
-      timeSlot: '14:30',
-      durationMinutes: 45,
-      price: 15000,
-      status: 'Cancelado',
-      notes: 'Avisó que reprograma por reunión laboral.',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: '#TUR-1048',
-      branchId: 'recoleta',
-      serviceId: 'serv-3',
-      barberId: 'barber-6',
-      clientName: 'Franco Domínguez',
-      clientPhone: '+54 9 11 7766-5544',
-      date: today,
-      timeSlot: '17:00',
-      durationMinutes: 45,
-      price: 18000,
-      status: 'Confirmado',
-      notes: 'Quiere café doble de cortesía.',
-      createdAt: new Date().toISOString(),
-    },
-
-    // TOMORROW
-    {
-      id: '#TUR-1049',
-      branchId: 'palermo',
-      serviceId: 'serv-1',
-      barberId: 'barber-1',
-      clientName: 'Luciano Vega',
-      clientPhone: '+54 9 11 6655-4433',
-      date: tomorrow,
-      timeSlot: '10:30',
-      durationMinutes: 30,
-      price: 12000,
-      status: 'Confirmado',
-      notes: 'Fade medio con navaja.',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: '#TUR-1050',
-      branchId: 'belgrano',
-      serviceId: 'serv-3',
-      barberId: 'barber-4',
-      clientName: 'Sebastián Romero',
-      clientPhone: '+54 9 11 9911-2288',
-      date: tomorrow,
-      timeSlot: '14:00',
-      durationMinutes: 45,
-      price: 18000,
-      status: 'Confirmado',
-      notes: 'Acompañado de su hijo.',
-      createdAt: new Date().toISOString(),
-    },
-
-    // DAY AFTER TOMORROW
-    {
-      id: '#TUR-1051',
-      branchId: 'recoleta',
-      serviceId: 'serv-1',
-      barberId: 'barber-5',
-      clientName: 'Julián Navarro',
-      clientPhone: '+54 9 11 1122-3399',
-      date: dayAfter,
-      timeSlot: '11:00',
-      durationMinutes: 30,
-      price: 12000,
-      status: 'Confirmado',
-      notes: 'Cliente habitual.',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: '#TUR-1052',
-      branchId: 'palermo',
-      serviceId: 'serv-6',
-      barberId: 'barber-2',
-      clientName: 'Agustín Cabrera',
-      clientPhone: '+54 9 11 4455-6677',
-      date: dayAfter,
-      timeSlot: '16:00',
-      durationMinutes: 20,
-      price: 8000,
-      status: 'Confirmado',
-      notes: 'Limpieza antes de casamiento.',
-      createdAt: new Date().toISOString(),
-    },
-  ];
+// Convert "HH:MM" to total minutes from midnight
+export const timeToMinutes = (timeStr: string): number => {
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return hours * 60 + minutes;
 };
+
+// Check if two time intervals overlap: [startA, endA) and [startB, endB)
+export const doIntervalsOverlap = (
+  startA: number,
+  endA: number,
+  startB: number,
+  endB: number
+): boolean => {
+  return Math.max(startA, startB) < Math.min(endA, endB);
+};
+
+import {
+  DEFAULT_BRANCHES,
+  DEFAULT_STAFF,
+  DEFAULT_SERVICES,
+  DEFAULT_SETTINGS,
+  createDefaultSchedule,
+  generateDefaultAppointments,
+  getServicePrice,
+} from '../data/initialData';
+
+export { getServicePrice, DEFAULT_BRANCHES, DEFAULT_STAFF, DEFAULT_SERVICES, DEFAULT_SETTINGS, generateDefaultAppointments };
 
 // STORAGE REPOSITORY CLASS
 class StorageService {
@@ -399,9 +103,67 @@ class StorageService {
     }
     if (!localStorage.getItem(STORAGE_KEYS.STAFF)) {
       localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(DEFAULT_STAFF));
+    } else {
+      // Migrate existing staff if missing assignedBranches or schedule
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.STAFF);
+        if (raw) {
+          const stored: Barber[] = JSON.parse(raw);
+          const needsMigration = stored.some(
+            (b) => !b.assignedBranches || !b.schedule || !b.customDaysOff
+          );
+          if (needsMigration) {
+            const upgraded = stored.map((b) => {
+              const def = DEFAULT_STAFF.find((ds) => ds.id === b.id);
+              return {
+                ...b,
+                assignedBranches: b.assignedBranches || def?.assignedBranches || [b.branchId],
+                schedule: b.schedule || def?.schedule || createDefaultSchedule(b.branchId),
+                customDaysOff: b.customDaysOff || def?.customDaysOff || [],
+              };
+            });
+            localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(upgraded));
+          }
+        }
+      } catch {
+        localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(DEFAULT_STAFF));
+      }
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
+      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
     }
     if (!localStorage.getItem(STORAGE_KEYS.SERVICES)) {
       localStorage.setItem(STORAGE_KEYS.SERVICES, JSON.stringify(DEFAULT_SERVICES));
+    } else {
+      // Migrate existing services if they lack branchPrices
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.SERVICES);
+        if (raw) {
+          const stored: Service[] = JSON.parse(raw);
+          const needsMigration = stored.some(
+            (s) => !s.branchPrices || Object.keys(s.branchPrices).length === 0
+          );
+          if (needsMigration) {
+            const upgraded = stored.map((s) => {
+              const def = DEFAULT_SERVICES.find((ds) => ds.id === s.id);
+              return {
+                ...s,
+                branchPrices:
+                  s.branchPrices && Object.keys(s.branchPrices).length > 0
+                    ? s.branchPrices
+                    : def?.branchPrices || {
+                        palermo: s.price,
+                        belgrano: s.price,
+                        recoleta: s.price,
+                      },
+              };
+            });
+            localStorage.setItem(STORAGE_KEYS.SERVICES, JSON.stringify(upgraded));
+          }
+        }
+      } catch {
+        localStorage.setItem(STORAGE_KEYS.SERVICES, JSON.stringify(DEFAULT_SERVICES));
+      }
     }
     if (!localStorage.getItem(STORAGE_KEYS.APPOINTMENTS)) {
       localStorage.setItem(STORAGE_KEYS.APPOINTMENTS, JSON.stringify(generateDefaultAppointments()));
@@ -413,13 +175,57 @@ class StorageService {
     localStorage.setItem(STORAGE_KEYS.BRANCHES, JSON.stringify(DEFAULT_BRANCHES));
     localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(DEFAULT_STAFF));
     localStorage.setItem(STORAGE_KEYS.SERVICES, JSON.stringify(DEFAULT_SERVICES));
+    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
     localStorage.setItem(STORAGE_KEYS.APPOINTMENTS, JSON.stringify(generateDefaultAppointments()));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('barber_services_updated'));
+      window.dispatchEvent(new Event('barber_settings_updated'));
+      window.dispatchEvent(new Event('barber_staff_updated'));
+    }
+  }
+
+  // SETTINGS
+  public getSettings(): BarberSettings {
+    const raw = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    if (!raw) return DEFAULT_SETTINGS;
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('Settings data is invalid');
+      }
+      return { ...DEFAULT_SETTINGS, ...parsed };
+    } catch (err) {
+      console.warn('Error reading settings from localStorage, resetting to defaults:', err);
+      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
+      return DEFAULT_SETTINGS;
+    }
+  }
+
+  public updateSettings(partial: Partial<BarberSettings>): BarberSettings {
+    const current = this.getSettings();
+    const updated = { ...current, ...partial };
+    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(updated));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('barber_settings_updated'));
+    }
+    return updated;
   }
 
   // BRANCHES
   public getBranches(): Branch[] {
     const raw = localStorage.getItem(STORAGE_KEYS.BRANCHES);
-    return raw ? JSON.parse(raw) : DEFAULT_BRANCHES;
+    if (!raw) return DEFAULT_BRANCHES;
+    try {
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        throw new Error('Branches data is not an array or empty');
+      }
+      return parsed;
+    } catch (err) {
+      console.warn('Error reading branches from localStorage, resetting to defaults:', err);
+      localStorage.setItem(STORAGE_KEYS.BRANCHES, JSON.stringify(DEFAULT_BRANCHES));
+      return DEFAULT_BRANCHES;
+    }
   }
 
   public updateBranch(updated: Branch): void {
@@ -428,32 +234,287 @@ class StorageService {
   }
 
   // STAFF
-  public getStaff(branchId?: string): Barber[] {
+  public getStaff(branchId?: string, dateStr?: string, includeInactive: boolean = false): Barber[] {
     const raw = localStorage.getItem(STORAGE_KEYS.STAFF);
-    const staff: Barber[] = raw ? JSON.parse(raw) : DEFAULT_STAFF;
-    if (branchId) {
-      return staff.filter((b) => b.branchId === branchId);
+    let staff: Barber[] = DEFAULT_STAFF;
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          throw new Error('Staff data is not an array or empty');
+        }
+        staff = parsed;
+      } catch (err) {
+        console.warn('Error reading staff from localStorage, resetting to defaults:', err);
+        localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(DEFAULT_STAFF));
+        staff = DEFAULT_STAFF;
+      }
     }
+
+    // Ensure backwards compatibility properties
+    staff = staff.map((b) => ({
+      ...b,
+      assignedBranches: b.assignedBranches || [b.branchId],
+      schedule: b.schedule || createDefaultSchedule(b.branchId),
+      customDaysOff: b.customDaysOff || [],
+      isActive: b.isActive !== false,
+    }));
+
+    if (!includeInactive) {
+      staff = staff.filter((b) => b.isActive !== false);
+    }
+
+    if (branchId) {
+      staff = staff.filter((b) =>
+        b.assignedBranches ? b.assignedBranches.includes(branchId as BranchId) : b.branchId === branchId
+      );
+    }
+
+    if (dateStr) {
+      // Filter out barbers who have day off on dateStr or are not scheduled on that day of week for this branch
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const dayOfWeek = new Date(y, m - 1, d).getDay(); // 0-6
+
+      staff = staff.filter((b) => {
+        // Check custom days off
+        if (b.customDaysOff && b.customDaysOff.includes(dateStr)) {
+          return false;
+        }
+        // Check schedule on this day of week
+        const dayPlan = b.schedule ? b.schedule[dayOfWeek] : null;
+        if (!dayPlan || !dayPlan.active) {
+          return false;
+        }
+        // If branchId was specified, check if scheduled for this specific branch
+        if (branchId && dayPlan.branchId && dayPlan.branchId !== branchId) {
+          return false;
+        }
+        return true;
+      });
+    }
+
     return staff;
   }
 
-  public getBarberById(barberId: string): Barber | undefined {
-    return this.getStaff().find((b) => b.id === barberId);
+  public getAllStaff(): Barber[] {
+    return this.getStaff(undefined, undefined, true);
   }
+
+  public getBarberById(barberId: string): Barber | undefined {
+    const staff = this.getAllStaff();
+    return staff.find((b) => b.id === barberId);
+  }
+
+  public addBarber(barberData: Omit<Barber, 'id'> | (Partial<Omit<Barber, 'id'>> & { name: string; assignedBranches: BranchId[] })): Barber {
+    const newId = `barber-${Date.now()}`;
+    const primaryBranch = barberData.assignedBranches?.[0] || barberData.branchId || 'palermo';
+    const assignedBranches = barberData.assignedBranches && barberData.assignedBranches.length > 0
+      ? barberData.assignedBranches
+      : [primaryBranch];
+
+    const defaultSchedule = createDefaultSchedule(primaryBranch, '10:00', '19:00');
+
+    const newBarber: Barber = {
+      id: newId,
+      name: barberData.name.trim(),
+      branchId: primaryBranch,
+      avatarUrl:
+        barberData.avatarUrl?.trim() ||
+        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+      rating: typeof barberData.rating === 'number' ? barberData.rating : 5.0,
+      reviewsCount: barberData.reviewsCount || 1,
+      specialties:
+        barberData.specialties && barberData.specialties.length > 0
+          ? barberData.specialties
+          : ['Corte Clásico', 'Fade', 'Perfilado de Barba'],
+      phone: barberData.phone?.trim() || '+54 9 11 4820-1122',
+      assignedBranches,
+      schedule: barberData.schedule || defaultSchedule,
+      customDaysOff: barberData.customDaysOff || [],
+      isActive: barberData.isActive !== false,
+    };
+
+    const currentStaff = this.getAllStaff();
+    const nextStaff = [...currentStaff, newBarber];
+    localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(nextStaff));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('barber_staff_updated'));
+    }
+    return newBarber;
+  }
+
+  public deleteBarber(barberId: string): void {
+    const currentStaff = this.getAllStaff();
+    const nextStaff = currentStaff.filter((b) => b.id !== barberId);
+    localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(nextStaff));
+
+    // Reassign any appointments for this deleted barber to 'any' to avoid orphaned bookings
+    const appointments = this.getAppointments();
+    let hasModified = false;
+    const updatedAppointments = appointments.map((app) => {
+      if (app.barberId === barberId) {
+        hasModified = true;
+        return {
+          ...app,
+          barberId: 'any',
+        };
+      }
+      return app;
+    });
+
+    if (hasModified) {
+      localStorage.setItem(STORAGE_KEYS.APPOINTMENTS, JSON.stringify(updatedAppointments));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('barber_appointments_updated'));
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('barber_staff_updated'));
+    }
+  }
+
+  public toggleBarberActive(barberId: string): Barber | undefined {
+    const barber = this.getBarberById(barberId);
+    if (!barber) return undefined;
+
+    const updatedBarber: Barber = {
+      ...barber,
+      isActive: barber.isActive === false ? true : false,
+    };
+
+    this.updateBarber(updatedBarber);
+    return updatedBarber;
+  }
+
+  public updateBarber(updated: Barber): void {
+    const currentStaff = this.getAllStaff();
+    const nextStaff = currentStaff.map((b) => (b.id === updated.id ? updated : b));
+    localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(nextStaff));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('barber_staff_updated'));
+    }
+  }
+
+  public toggleCustomDayOff(barberId: string, dateStr: string): Barber | undefined {
+    const barber = this.getBarberById(barberId);
+    if (!barber) return undefined;
+
+    const daysOff = barber.customDaysOff || [];
+    const exists = daysOff.includes(dateStr);
+    const updatedDaysOff = exists
+      ? daysOff.filter((d) => d !== dateStr)
+      : [...daysOff, dateStr].sort();
+
+    const updatedBarber: Barber = {
+      ...barber,
+      customDaysOff: updatedDaysOff,
+    };
+    this.updateBarber(updatedBarber);
+    return updatedBarber;
+  }
+
 
   // SERVICES
   public getServices(): Service[] {
     const raw = localStorage.getItem(STORAGE_KEYS.SERVICES);
-    return raw ? JSON.parse(raw) : DEFAULT_SERVICES;
+    if (!raw) return DEFAULT_SERVICES;
+    try {
+      const parsed: Service[] = JSON.parse(raw);
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        throw new Error('Services data is not an array or empty');
+      }
+      return parsed.map((s) => {
+        if (!s.branchPrices) {
+          const def = DEFAULT_SERVICES.find((ds) => ds.id === s.id);
+          return {
+            ...s,
+            branchPrices: def?.branchPrices || {
+              palermo: s.price,
+              belgrano: s.price,
+              recoleta: s.price,
+            },
+          };
+        }
+        return s;
+      });
+    } catch (err) {
+      console.warn('Error reading services from localStorage, resetting to defaults:', err);
+      localStorage.setItem(STORAGE_KEYS.SERVICES, JSON.stringify(DEFAULT_SERVICES));
+      return DEFAULT_SERVICES;
+    }
   }
 
   public getServiceById(serviceId: string): Service | undefined {
-    return this.getServices().find((s) => s.id === serviceId);
+    return this.getServices().find(
+      (s) =>
+        s.id === serviceId ||
+        (serviceId === 'corte-fade' && (s.id === 'serv-1' || s.name.includes('Corte Clásico'))) ||
+        (serviceId === 'serv-1' && s.id === 'corte-fade')
+    );
+  }
+
+  public getServicePrice(service: Service | undefined | null, branchId?: BranchId | string): number {
+    return getServicePrice(service, branchId);
   }
 
   public updateService(updated: Service): void {
     const services = this.getServices().map((s) => (s.id === updated.id ? updated : s));
     localStorage.setItem(STORAGE_KEYS.SERVICES, JSON.stringify(services));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('barber_services_updated'));
+    }
+  }
+
+  public updateServiceBranchPrice(serviceId: string, branchId: BranchId, newPrice: number): void {
+    const validPrice = !isNaN(newPrice) && newPrice >= 500 ? Math.round(newPrice) : 500;
+    const services = this.getServices().map((s) => {
+      if (s.id === serviceId) {
+        const branchPrices = {
+          ...(s.branchPrices || { palermo: s.price, belgrano: s.price, recoleta: s.price }),
+          [branchId]: validPrice,
+        };
+        return {
+          ...s,
+          branchPrices,
+          price: branchId === 'palermo' ? validPrice : s.price,
+        };
+      }
+      return s;
+    });
+    localStorage.setItem(STORAGE_KEYS.SERVICES, JSON.stringify(services));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('barber_services_updated'));
+    }
+  }
+
+  public updateServiceBranchPrices(
+    serviceId: string,
+    newBranchPrices: Partial<Record<BranchId, number>>
+  ): void {
+    const services = this.getServices().map((s) => {
+      if (s.id === serviceId) {
+        const branchPrices = {
+          ...(s.branchPrices || { palermo: s.price, belgrano: s.price, recoleta: s.price }),
+        };
+        (Object.keys(newBranchPrices) as BranchId[]).forEach((bId) => {
+          const val = newBranchPrices[bId];
+          if (val !== undefined && !isNaN(val) && val >= 500) {
+            branchPrices[bId] = Math.round(val);
+          }
+        });
+        return {
+          ...s,
+          branchPrices,
+          price: branchPrices.palermo ?? s.price,
+        };
+      }
+      return s;
+    });
+    localStorage.setItem(STORAGE_KEYS.SERVICES, JSON.stringify(services));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('barber_services_updated'));
+    }
   }
 
   public addService(newService: Omit<Service, 'id'>): Service {
@@ -461,25 +522,103 @@ class StorageService {
     const service: Service = {
       ...newService,
       id: `serv-${Date.now()}`,
+      branchPrices: newService.branchPrices || {
+        palermo: newService.price,
+        belgrano: newService.price,
+        recoleta: newService.price,
+      },
     };
     services.push(service);
     localStorage.setItem(STORAGE_KEYS.SERVICES, JSON.stringify(services));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('barber_services_updated'));
+    }
     return service;
   }
 
   public deleteService(serviceId: string): void {
     const services = this.getServices().filter((s) => s.id !== serviceId);
     localStorage.setItem(STORAGE_KEYS.SERVICES, JSON.stringify(services));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('barber_services_updated'));
+    }
   }
 
   // APPOINTMENTS
   public getAppointments(): Appointment[] {
     const raw = localStorage.getItem(STORAGE_KEYS.APPOINTMENTS);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) {
+        throw new Error('Appointments data is not an array');
+      }
+      return parsed;
+    } catch (err) {
+      console.warn('Error reading appointments from localStorage, resetting to defaults:', err);
+      const defaults = generateDefaultAppointments();
+      localStorage.setItem(STORAGE_KEYS.APPOINTMENTS, JSON.stringify(defaults));
+      return defaults;
+    }
   }
 
   public saveAppointment(appointmentData: Omit<Appointment, 'id' | 'createdAt'>): Appointment {
     const appointments = this.getAppointments();
+
+    const newStart = timeToMinutes(appointmentData.timeSlot);
+    const newEnd = newStart + appointmentData.durationMinutes;
+
+    // Filter appointments for the same branch and date that are not cancelled
+    const activeSameDayAppointments = appointments.filter(
+      (app) =>
+        app.branchId === appointmentData.branchId &&
+        app.date === appointmentData.date &&
+        app.status !== 'Cancelado'
+    );
+
+    // 1. Check chair capacity limit for this branch during the requested time window
+    const branch = this.getBranches().find((b) => b.id === appointmentData.branchId);
+    const chairsLimit = branch ? branch.chairsCount : 3;
+    const overlappingBranchAppsCount = activeSameDayAppointments.filter((app) => {
+      const appStart = timeToMinutes(app.timeSlot);
+      const appEnd = appStart + app.durationMinutes;
+      return doIntervalsOverlap(newStart, newEnd, appStart, appEnd);
+    }).length;
+
+    if (overlappingBranchAppsCount >= chairsLimit) {
+      throw new Error('Capacidad máxima de la sucursal alcanzada para el horario seleccionado.');
+    }
+
+    // 2. If a specific barber is requested (not 'any'), verify the barber does not have a colliding appointment
+    if (appointmentData.barberId && appointmentData.barberId !== 'any') {
+      const barberConflict = activeSameDayAppointments.find((app) => {
+        if (app.barberId !== appointmentData.barberId) return false;
+        const appStart = timeToMinutes(app.timeSlot);
+        const appEnd = appStart + app.durationMinutes;
+        return doIntervalsOverlap(newStart, newEnd, appStart, appEnd);
+      });
+
+      if (barberConflict) {
+        throw new Error('El profesional seleccionado ya cuenta con una reserva en ese horario.');
+      }
+    } else if (appointmentData.barberId === 'any') {
+      // If 'any', ensure at least one active barber is available and free
+      const branchStaffOnDate = this.getStaff(appointmentData.branchId, appointmentData.date);
+      const hasFreeBarber = branchStaffOnDate.some((barber) => {
+        const conflict = activeSameDayAppointments.some((app) => {
+          if (app.barberId !== barber.id) return false;
+          const appStart = timeToMinutes(app.timeSlot);
+          const appEnd = appStart + app.durationMinutes;
+          return doIntervalsOverlap(newStart, newEnd, appStart, appEnd);
+        });
+        return !conflict;
+      });
+
+      if (!hasFreeBarber) {
+        throw new Error('No hay profesionales disponibles en la sucursal para el horario seleccionado.');
+      }
+    }
+
     const newId = `#TUR-${Math.floor(1000 + Math.random() * 9000)}`;
     const appointment: Appointment = {
       ...appointmentData,
@@ -541,6 +680,16 @@ class StorageService {
       'Creado En',
     ];
 
+    const sanitizeCell = (val: string | number | undefined | null): string => {
+      if (val === undefined || val === null) return '""';
+      let str = String(val);
+      // Neutralize Excel formula injection if text starts with =, +, -, @ (including leading whitespace)
+      if (/^\s*[=+\-@]/.test(str)) {
+        str = `'${str}`;
+      }
+      return `"${str.replace(/"/g, '""')}"`;
+    };
+
     const rows = appointments.map((app) => {
       const branch = branches.find((b) => b.id === app.branchId)?.name || app.branchId;
       const service = services.find((s) => s.id === app.serviceId)?.name || app.serviceId;
@@ -550,19 +699,19 @@ class StorageService {
           : staff.find((st) => st.id === app.barberId)?.name || app.barberId;
 
       return [
-        `"${app.id}"`,
-        `"${app.date}"`,
-        `"${app.timeSlot}"`,
-        `"${branch}"`,
-        `"${service}"`,
-        app.durationMinutes,
-        `"${barber}"`,
-        `"${app.clientName}"`,
-        `"${app.clientPhone}"`,
-        app.price,
-        `"${app.status}"`,
-        `"${(app.notes || '').replace(/"/g, '""')}"`,
-        `"${app.createdAt}"`,
+        sanitizeCell(app.id),
+        sanitizeCell(app.date),
+        sanitizeCell(app.timeSlot),
+        sanitizeCell(branch),
+        sanitizeCell(service),
+        sanitizeCell(app.durationMinutes),
+        sanitizeCell(barber),
+        sanitizeCell(app.clientName),
+        sanitizeCell(app.clientPhone),
+        sanitizeCell(app.price),
+        sanitizeCell(app.status),
+        sanitizeCell(app.notes),
+        sanitizeCell(app.createdAt),
       ].join(',');
     });
 

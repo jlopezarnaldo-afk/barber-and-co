@@ -4,8 +4,8 @@
   "description": "Plataforma de turnos online y gestión de barberías de lujo en Buenos Aires",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#09090b",
+  "background_color": "#ECE7DE",
+  "theme_color": "#ECE7DE",
   "orientation": "portrait-primary",
   "icons": [
     {

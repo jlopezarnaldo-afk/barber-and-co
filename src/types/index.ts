@@ -11,16 +11,32 @@ export interface Branch {
   neighborhood: string;
 }
 
+export interface BarberScheduleDay {
+  active: boolean;
+  branchId: BranchId | null;
+  start: string | null; // e.g. '10:00'
+  end: string | null;   // e.g. '19:00'
+}
+
 export interface Barber {
   id: string;
   name: string;
-  branchId: BranchId;
+  branchId: BranchId; // primary / legacy branch
   avatarUrl: string;
   rating: number;
   reviewsCount: number;
   specialties: string[];
   phone: string;
+  assignedBranches: BranchId[];
+  schedule: Record<number, BarberScheduleDay>; // 0: Sunday to 6: Saturday
+  customDaysOff: string[]; // 'YYYY-MM-DD'
+  isActive?: boolean; // active/paused status
 }
+
+export interface BarberSettings {
+  allowClientSelectBarber: boolean; // true: client can pick, false: automatic unified allocation
+}
+
 
 export type ServiceCategory = 'Corte' | 'Barba' | 'Combos' | 'Tratamientos';
 
@@ -30,6 +46,7 @@ export interface Service {
   category: ServiceCategory;
   durationMinutes: number;
   price: number;
+  branchPrices?: Partial<Record<BranchId, number>>;
   description: string;
   popular: boolean;
 }

@@ -6,72 +6,94 @@ export const BrandPerks: React.FC = () => {
     {
       icon: Flame,
       title: 'Ritual de Toalla Caliente',
-      desc: 'Infusionada en vapor con esencias de menta y eucalipto para abrir los poros y brindar una relajación total.',
+      desc: 'Infusionada en vapor con esencias botánicas para abrir los poros y distender las facciones antes del afeitado.',
     },
     {
       icon: Wine,
-      title: 'Whisky Bar & Espresso',
-      desc: 'Degustación de café de especialidad recién molido o una copa de Scotch Whisky mientras disfrutas tu sesión.',
+      title: 'Café & Destilados',
+      desc: 'Degustación de café de especialidad recién molido o una copa de single malt durante tu sesión.',
     },
     {
       icon: ShieldCheck,
-      title: 'Bioseguridad Grado Médico',
-      desc: 'Navajas descartables selladas y esterilización de instrumental con luz ultravioleta frente a cada cliente.',
+      title: 'Bioseguridad Sanitaria',
+      desc: 'Navajas descartables de un solo uso y esterilización ultravioleta de cada herramienta frente a vos.',
     },
     {
       icon: Sparkles,
-      title: 'Sillones Italianos Vintage',
-      desc: 'Tapicería artesanal en cuero con reclinado ergonómico 180° para que tu espalda descanse plenamente.',
+      title: 'Sillones Clásicos',
+      desc: 'Tapicería artesanal en cuero con reclinado ergonómico pensado para una postura de reposo natural.',
     },
     {
       icon: Music,
-      title: 'Atmósfera Acústica Curada',
-      desc: 'Selección sonora de jazz moderno, lo-fi y soul a volumen ideal para desconectar de la ciudad.',
+      title: 'Acústica Cuidada',
+      desc: 'Selección musical sutil en vinilo y streaming con acústica diseñada para aislarte de la ciudad.',
     },
     {
       icon: Wifi,
-      title: 'Conectividad & Confort',
-      desc: 'Wi-Fi 6 de alta velocidad, puertos de carga rápida en cada estación y climatización inteligente.',
+      title: 'Espacio de Confort',
+      desc: 'Conexión de alta velocidad, puertos de carga dedicados y climatización balanceada en cada estación.',
     },
   ];
 
   return (
-    <section id="experiencia" className="py-20 bg-zinc-900/60 border-b border-zinc-850">
+    <section id="experiencia" className="bg-[#DDD6C8] text-[#141210] py-16 lg:py-24 border-t border-[#141210]/25 overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-14">
-          <span className="text-xs font-bold text-amber-500 uppercase tracking-widest">
-            Nuestros Pilares
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-100 tracking-tight mt-2">
-            La Experiencia Barber &amp; Co.
-          </h2>
-          <p className="mt-3 text-zinc-400 text-sm">
-            Más que un corte de pelo, creamos un refugio donde el cuidado personal masculino se transforma en un ritual placentero.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {perks.map((perk, i) => {
-            const Icon = perk.icon;
-            return (
-              <div
-                key={i}
-                className="p-6 rounded-2xl bg-zinc-950/80 border border-zinc-800/80 hover:border-amber-500/40 transition-all duration-200 group"
-              >
-                <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-4 group-hover:scale-110 transition-transform">
-                  <Icon className="w-6 h-6" />
-                </div>
-                <h3 className="text-base font-bold text-zinc-100 group-hover:text-amber-400 transition-colors">
-                  {perk.title}
-                </h3>
-                <p className="text-xs sm:text-sm text-zinc-400 mt-2 leading-relaxed">
-                  {perk.desc}
-                </p>
+        {/* Asymmetric Editorial Spread: 4 cols manifesto / 8 cols numbered rituals */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
+          {/* Left Column: Editorial Introduction & Manifesto (4/12) */}
+          <div className="lg:col-span-4 space-y-6">
+            <div>
+              <div className="text-xs font-medium tracking-wider text-[#141210]/60 mb-3">
+                N.º 05 — La experiencia
               </div>
-            );
-          })}
+              <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-[#141210] tracking-tight">
+                Estándares y rituales
+              </h2>
+            </div>
+
+            <p className="text-sm text-[#141210]/80 leading-relaxed">
+              Un espacio donde el cuidado personal masculino se resuelve con calma, oficio y precisión técnica. Preservamos las técnicas clásicas de tijera y navaja en un entorno concebido para desconectar del ruido exterior.
+            </p>
+
+            <div className="pt-4 border-t border-[#141210]/25">
+              <span className="font-serif italic text-sm text-[#141210]/70">
+                "El valor de un corte no reside en la velocidad, sino en la exactitud del detalle."
+              </span>
+            </div>
+          </div>
+
+          {/* Right Column: Numbered Editorial Rituals (8/12) */}
+          <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
+            {perks.map((perk, i) => {
+              const Icon = perk.icon;
+              const numeral = String(i + 1).padStart(2, '0');
+
+              return (
+                <div
+                  key={i}
+                  className="pb-6 border-b border-[#141210]/25 flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between text-[#141210]/50 text-xs mb-3">
+                      <span className="font-serif font-bold text-sm tracking-widest">{numeral}</span>
+                      <Icon className="w-4 h-4 stroke-[1.75]" />
+                    </div>
+
+                    <h3 className="font-serif text-base sm:text-lg font-bold text-[#141210]">
+                      {perk.title}
+                    </h3>
+
+                    <p className="text-xs sm:text-sm text-[#141210]/75 mt-2 leading-relaxed">
+                      {perk.desc}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>
   );
 };
+

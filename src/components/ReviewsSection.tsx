@@ -1,78 +1,101 @@
 import React from 'react';
-import { Star, CheckCircle, Quote } from 'lucide-react';
+import { Quote } from 'lucide-react';
 
 export const ReviewsSection: React.FC = () => {
   const reviews = [
     {
       name: 'Dr. Lucas Pellegrini',
-      role: 'Cliente frecuente • Sede Recoleta',
-      stars: 5,
+      role: 'Cliente habitual • Sede Recoleta',
       comment:
-        'Excelente atención. Joaquín es un maestro con la barba y las tijeras. La puntualidad en los turnos es sagrada, algo muy difícil de encontrar hoy en día.',
+        'Excelente atención. El oficio con las tijeras y la navaja es impecable. La puntualidad en el inicio del turno es estricta, algo difícil de hallar en la ciudad.',
     },
     {
       name: 'Mariano Benavídez',
       role: 'Cliente regular • Sede Palermo Soho',
-      stars: 5,
       comment:
-        'El ritual de la toalla caliente y el café mientras te atienden es 10/10. La reserva por WhatsApp y la app funcionan de manera instantánea y súper intuitiva.',
+        'El ritual de la toalla caliente y el café mientras te atienden marca una diferencia real. La reserva digital es directa y sin fricciones.',
     },
     {
       name: 'Gonzalo Fernández',
-      role: 'Cliente frecuente • Sede Belgrano R',
-      stars: 5,
+      role: 'Cliente habitual • Sede Belgrano R',
       comment:
-        'El combo corte + barba con Enzo en Palermo y Lucas en Belgrano es extraordinario. Muy prolijos, ambiente relajado y productos de primer nivel.',
+        'El servicio integral de corte y barba mantiene una prolijidad constante. El ambiente es tranquilo y los productos de primera línea.',
     },
   ];
 
   return (
-    <section id="opiniones" className="py-20 bg-zinc-950 border-b border-zinc-850">
+    <section id="opiniones" className="bg-[#ECE7DE] text-[#141210] py-16 lg:py-24 border-t border-[#141210]/25 overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-14">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold uppercase tracking-wider mb-3">
-            <Star className="w-3.5 h-3.5 fill-amber-400" />
-            <span>Reseñas de Clientes</span>
+        {/* Section Header */}
+        <div className="mb-10 lg:mb-14">
+          <div className="text-xs font-medium tracking-wider text-[#141210]/60 mb-3">
+            N.º 06 — Testimonios
           </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-100 tracking-tight">
-            Confianza respaldada por resultados
+          <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-[#141210] tracking-tight">
+            La voz de nuestros clientes
           </h2>
-          <p className="mt-3 text-zinc-400 text-sm">
-            Más de 4.9 estrellas en Google con cientos de testimonios comprobables.
+          <p className="mt-2 text-xs sm:text-sm text-[#141210]/70 max-w-lg">
+            Apreciaciones de clientes que confían en nuestro criterio y puntualidad de atención.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {reviews.map((rev, idx) => (
-            <div
-              key={idx}
-              className="p-6 rounded-2xl bg-zinc-900/80 border border-zinc-800/80 flex flex-col justify-between relative shadow-lg"
-            >
-              <Quote className="w-8 h-8 text-zinc-800 absolute top-4 right-4" />
-              <div>
-                <div className="flex items-center gap-1 text-amber-400 mb-3">
-                  {[...Array(rev.stars)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-400" />
-                  ))}
-                </div>
-                <p className="text-zinc-300 text-xs sm:text-sm leading-relaxed italic">
-                  "{rev.comment}"
-                </p>
-              </div>
+        {/* Editorial Pull-Quotes Spread (7 cols featured pull-quote / 5 cols secondary reviews) */}
+        {(() => {
+          const featuredReview = reviews[0];
+          const secondaryReviews = reviews.slice(1);
 
-              <div className="mt-6 pt-4 border-t border-zinc-800/80 flex items-center justify-between">
-                <div>
-                  <h4 className="font-bold text-sm text-zinc-100">{rev.name}</h4>
-                  <p className="text-[11px] text-zinc-400">{rev.role}</p>
+          return (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-stretch">
+              {/* Featured Main Pull Quote (7/12) */}
+              {featuredReview && (
+                <div className="lg:col-span-7 bg-[#DDD6C8]/40 border border-[#141210]/25 p-8 sm:p-10 rounded-[2px] flex flex-col justify-between">
+                  <div>
+                    <Quote className="w-8 h-8 text-[#141210]/30 mb-6 stroke-[1.5]" />
+                    <blockquote className="font-serif text-xl sm:text-2xl lg:text-3xl text-[#141210] leading-snug italic">
+                      "{featuredReview.comment}"
+                    </blockquote>
+                  </div>
+
+                  <div className="mt-8 pt-6 border-t border-[#141210]/25 flex items-center justify-between">
+                    <div>
+                      <h4 className="font-serif font-bold text-sm sm:text-base text-[#141210]">
+                        {featuredReview.name}
+                      </h4>
+                      <p className="text-xs text-[#141210]/60 mt-0.5">{featuredReview.role}</p>
+                    </div>
+                    <span className="text-[10px] font-medium tracking-wider text-[#141210]/50 border border-[#141210]/25 px-2.5 py-1 rounded-[2px]">
+                      Testimonio verificado
+                    </span>
+                  </div>
                 </div>
-                <span title="Verificado">
-                  <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-                </span>
+              )}
+
+              {/* Secondary Reviews Column (5/12) */}
+              <div className="lg:col-span-5 flex flex-col justify-between gap-6">
+                {secondaryReviews.map((rev, idx) => (
+                  <div
+                    key={idx}
+                    className="p-6 sm:p-7 bg-[#DDD6C8]/30 border border-[#141210]/25 rounded-[2px] flex flex-col justify-between flex-1"
+                  >
+                    <div>
+                      <Quote className="w-5 h-5 text-[#141210]/30 mb-3 stroke-[1.5]" />
+                      <p className="font-serif text-sm sm:text-base text-[#141210] leading-relaxed italic">
+                        "{rev.comment}"
+                      </p>
+                    </div>
+
+                    <div className="mt-5 pt-3 border-t border-[#141210]/25">
+                      <h4 className="font-medium text-xs sm:text-sm text-[#141210]">{rev.name}</h4>
+                      <p className="text-[11px] text-[#141210]/60 mt-0.5">{rev.role}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
+          );
+        })()}
       </div>
     </section>
   );
 };
+
