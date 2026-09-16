@@ -91,7 +91,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#ECE7DE] text-[#141210] font-sans selection:bg-[#DDD6C8] selection:text-[#141210] overflow-x-hidden">
+    <div className="min-h-screen min-h-dvh bg-[#ECE7DE] text-[#141210] font-sans selection:bg-[#DDD6C8] selection:text-[#141210] overflow-x-hidden">
       {/* Global Navbar */}
       <Navbar
         currentRole={currentRole}

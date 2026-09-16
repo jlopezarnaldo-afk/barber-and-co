@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type {
   BranchId,
   Appointment,
@@ -63,6 +63,54 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
 
   const [settings, setSettings] = useState(() => storageService.getSettings());
   const [, setStaffTick] = useState(0);
+
+  // Mobile & UX scroll/focus references
+  const wizardRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  const scrollToWizard = () => {
+    if (!wizardRef.current) return;
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    wizardRef.current.scrollIntoView({
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+      block: 'start',
+    });
+  };
+
+  // Advance / change step with explicit smooth scroll to wizard container
+  const goToStep = (nextStep: number) => {
+    // Dismiss virtual keyboard if an input is active to prevent post-navigation layout shift
+    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    setStep(nextStep);
+    setFormError('');
+    // Immediate scroll
+    scrollToWizard();
+    // Re-align after React DOM render and potential virtual keyboard collapse
+    if (typeof window !== 'undefined') {
+      requestAnimationFrame(() => {
+        setTimeout(scrollToWizard, 60);
+      });
+    }
+  };
+
+  // Only auto-focus first text input on desktop with fine pointer (never on mobile/touch to prevent virtual keyboard popups and layout jumps)
+  useEffect(() => {
+    if (step === 4) {
+      const isDesktopWithMouse =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(min-width: 1024px) and (hover: hover) and (pointer: fine)').matches;
+      if (isDesktopWithMouse) {
+        const timer = setTimeout(() => {
+          nameInputRef.current?.focus({ preventScroll: true });
+        }, 150);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [step]);
 
   useEffect(() => {
     const handleSettingsUpdated = () => setSettings(storageService.getSettings());
@@ -160,7 +208,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
         chosenSlot?.reason ||
           'El horario seleccionado ya no se encuentra disponible. Por favor elija otro turno.'
       );
-      setStep(3);
+      goToStep(3);
       return;
     }
 
@@ -194,7 +242,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
       });
 
       setCreatedAppointment(appointment);
-      setStep(5); // Success step
+      goToStep(5); // Success step
 
       // Fire celebration confetti
       try {
@@ -216,7 +264,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
         err?.message ||
           'No fue posible registrar el turno por conflicto de horario. Por favor elija otro momento.'
       );
-      setStep(3);
+      goToStep(3);
     }
   };
 
@@ -239,7 +287,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
   };
 
   return (
-    <section id="reservar" className="bg-[#ECE7DE] text-[#141210] py-16 lg:py-24 border-t border-[#141210]/25 overflow-x-hidden">
+    <section id="reservar" className="bg-[#ECE7DE] text-[#141210] py-16 lg:py-24 border-t border-[#141210]/25 overflow-x-hidden min-h-screen min-h-dvh flex flex-col justify-start">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="mb-10 lg:mb-14">
@@ -255,7 +303,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
         </div>
 
         {/* Asymmetric Wizard Layout: 4 cols editorial sidebar / 8 cols wizard form */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+        <div ref={wizardRef} className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start scroll-mt-20">
           {/* Left Column: Progress & Real-time Booking Context */}
           <div className="lg:col-span-4 space-y-6">
             {/* Step Navigation Indicator */}
@@ -279,7 +327,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                       key={s.num}
                       type="button"
                       disabled={step < s.num}
-                      onClick={() => setStep(s.num)}
+                      onClick={() => goToStep(s.num)}
                       className={`w-full text-left p-2.5 rounded-[2px] flex items-start gap-3 transition-colors cursor-pointer min-h-[44px] ${
                         step === s.num
                           ? 'bg-[#141210] text-[#ECE7DE]'
@@ -326,7 +374,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
 
           {/* Right Column: Active Step Interactive Form */}
           <div className="lg:col-span-8">
-            <div className="bg-[#DDD6C8]/40 border border-[#141210]/25 rounded-[2px] p-6 sm:p-8">
+            <div className="bg-[#DDD6C8]/40 border border-[#141210]/25 rounded-[2px] p-6 sm:p-8 min-h-[480px] flex flex-col justify-between">
           {/* STEP 1: SUCURSAL SELECTION */}
           {step === 1 && (
             <div className="space-y-6 animate-fadeIn">
@@ -393,7 +441,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
               <div className="pt-4 flex justify-end">
                 <button
                   type="button"
-                  onClick={() => setStep(2)}
+                  onClick={() => goToStep(2)}
                   className="inline-flex items-center gap-2 px-6 py-3.5 min-h-[44px] rounded-[2px] bg-[#141210] hover:bg-[#141210]/90 text-[#ECE7DE] font-medium text-xs sm:text-sm transition-colors cursor-pointer"
                 >
                   <span>Continuar a servicios</span>
@@ -546,7 +594,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
               <div className="pt-4 flex items-center justify-between">
                 <button
                   type="button"
-                  onClick={() => setStep(1)}
+                  onClick={() => goToStep(1)}
                   className="inline-flex items-center gap-1.5 px-4 py-3 min-h-[44px] text-[#141210]/70 hover:text-[#141210] text-xs font-medium transition-colors cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4 stroke-[1.75]" />
@@ -554,7 +602,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setStep(3)}
+                  onClick={() => goToStep(3)}
                   className="inline-flex items-center gap-2 px-6 py-3.5 min-h-[44px] rounded-[2px] bg-[#141210] hover:bg-[#141210]/90 text-[#ECE7DE] font-medium text-xs sm:text-sm transition-colors cursor-pointer"
                 >
                   <span>Continuar a fecha y hora</span>
@@ -678,7 +726,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                 </div>
 
                 {selectedTimeSlot && (
-                  <div className="mt-3 p-3 bg-[#ECE7DE] border border-[#141210]/20 rounded-[2px] flex items-center justify-between text-xs text-[#141210]">
+                  <div className="mt-3 p-3 bg-[#ECE7DE] border border-[#141210]/20 rounded-[2px] flex items-center justify-between text-xs text-[#141210] animate-fadeIn">
                     <span className="flex items-center gap-1.5 font-medium">
                       <CheckCircle className="w-4 h-4 text-[#141210]" />
                       Horario seleccionado: <strong>{selectedTimeSlot} hs</strong> ({selectedDate})
@@ -702,7 +750,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
               <div className="pt-4 flex items-center justify-between">
                 <button
                   type="button"
-                  onClick={() => setStep(2)}
+                  onClick={() => goToStep(2)}
                   className="inline-flex items-center gap-1.5 px-4 py-3 min-h-[44px] text-[#141210]/70 hover:text-[#141210] text-xs font-medium transition-colors cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4 stroke-[1.75]" />
@@ -711,7 +759,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                 <button
                   type="button"
                   disabled={!selectedTimeSlot}
-                  onClick={() => setStep(4)}
+                  onClick={() => goToStep(4)}
                   className={`inline-flex items-center gap-2 px-6 py-3.5 min-h-[44px] rounded-[2px] font-medium text-xs sm:text-sm transition-colors ${
                     selectedTimeSlot
                       ? 'bg-[#141210] hover:bg-[#141210]/90 text-[#ECE7DE] cursor-pointer'
@@ -779,13 +827,14 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                   <div className="relative">
                     <User className="w-4 h-4 text-[#141210]/50 absolute left-3.5 top-1/2 -translate-y-1/2 stroke-[1.75]" />
                     <input
+                      ref={nameInputRef}
                       type="text"
                       required
                       maxLength={80}
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
                       placeholder="Ej: Martín Rodríguez"
-                      className="w-full pl-10 pr-4 py-3 min-h-[44px] rounded-[2px] bg-[#ECE7DE] border border-[#141210]/20 focus:border-[#141210] text-[#141210] text-sm focus:outline-none transition-colors"
+                      className="w-full pl-10 pr-4 py-3 min-h-[44px] rounded-[2px] bg-[#ECE7DE] border border-[#141210]/20 focus:border-[#141210] text-[#141210] text-base sm:text-sm focus:outline-none transition-colors"
                     />
                   </div>
                 </div>
@@ -803,7 +852,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                       value={clientPhone}
                       onChange={(e) => setClientPhone(e.target.value)}
                       placeholder="Ej: +54 9 11 5522-3344"
-                      className="w-full pl-10 pr-4 py-3 min-h-[44px] rounded-[2px] bg-[#ECE7DE] border border-[#141210]/20 focus:border-[#141210] text-[#141210] text-sm focus:outline-none transition-colors"
+                      className="w-full pl-10 pr-4 py-3 min-h-[44px] rounded-[2px] bg-[#ECE7DE] border border-[#141210]/20 focus:border-[#141210] text-[#141210] text-base sm:text-sm focus:outline-none transition-colors"
                     />
                   </div>
                 </div>
@@ -820,13 +869,15 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                       value={clientNotes}
                       onChange={(e) => setClientNotes(e.target.value)}
                       placeholder="Ej: Piel sensible, recorte de cejas..."
-                      className="w-full pl-10 pr-4 py-2.5 rounded-[2px] bg-[#ECE7DE] border border-[#141210]/20 focus:border-[#141210] text-[#141210] text-sm focus:outline-none transition-colors"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-[2px] bg-[#ECE7DE] border border-[#141210]/20 focus:border-[#141210] text-[#141210] text-base sm:text-sm focus:outline-none transition-colors"
                     />
                   </div>
                 </div>
 
                 {formError && (
-                  <p className="text-xs text-rose-700 font-medium">{formError}</p>
+                  <div className="p-3 bg-rose-50/90 border border-rose-200/80 rounded-[2px] animate-fadeIn">
+                    <p className="text-xs text-rose-700 font-medium">{formError}</p>
+                  </div>
                 )}
               </div>
 
@@ -834,7 +885,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
               <div className="pt-4 flex items-center justify-between gap-4">
                 <button
                   type="button"
-                  onClick={() => setStep(3)}
+                  onClick={() => goToStep(3)}
                   className="inline-flex items-center gap-1.5 px-4 py-3 min-h-[44px] text-[#141210]/70 hover:text-[#141210] text-xs font-medium transition-colors cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4 stroke-[1.75]" />
@@ -928,7 +979,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setStep(1);
+                    goToStep(1);
                     setCreatedAppointment(null);
                     setSelectedTimeSlot('');
                     setClientName('');
