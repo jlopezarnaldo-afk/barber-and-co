@@ -79,13 +79,20 @@ assert.strictEqual(slot1000?.available, true, '10:00 slot for 60m must be availa
 console.log('✓ 60-min interval calculations and closing time constraints verified');
 
 // 5. Verify Appointment Creation
+// Ensure collision test date is an active working day (Lun-Sáb) so barbershop is open
+let futureWorkingOffset = 4;
+while (new Date(Date.now() + futureWorkingOffset * 86400000).getDay() === 0) {
+  futureWorkingOffset++;
+}
+const workingCollisionDate = getDateString(futureWorkingOffset);
+
 const newApp = storageService.saveAppointment({
   branchId: 'recoleta',
   serviceId: s3.id,
   barberId: 'barber-5',
   clientName: 'Test Automation Client',
   clientPhone: '+54 9 11 9999-8888',
-  date: getDateString(4),
+  date: workingCollisionDate,
   timeSlot: '11:00',
   durationMinutes: 45,
   price: s3.price,
@@ -101,7 +108,7 @@ console.log(`✓ New appointment created and saved: ${newApp.id}`);
 // 6. Verify Collision for that newly booked barber at 11:00 (45m duration: 11:00 to 11:45)
 const slotsCollision = getAvailableTimeSlots({
   branchId: 'recoleta',
-  date: getDateString(4),
+  date: workingCollisionDate,
   durationMinutes: 30,
   barberId: 'barber-5'
 });

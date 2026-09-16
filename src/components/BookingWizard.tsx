@@ -66,18 +66,35 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
 
   // Mobile & UX scroll/focus references
   const wizardRef = useRef<HTMLDivElement>(null);
+  const stepContentRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const isFirstRender = useRef(true);
+
+  const currentStep = step;
 
   const scrollToWizard = () => {
-    if (!wizardRef.current) return;
+    const target = stepContentRef.current || wizardRef.current;
+    if (!target) return;
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    wizardRef.current.scrollIntoView({
+    target.scrollIntoView({
       behavior: prefersReducedMotion ? 'auto' : 'smooth',
       block: 'start',
     });
   };
+
+  // Auto-scroll to active step header on step transitions
+  useEffect(() => {
+    // Al cambiar 'currentStep', desplaza suavemente la vista para que el inicio del paso quede visible en pantalla
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (stepContentRef.current) {
+      stepContentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [currentStep]);
 
   // Advance / change step with explicit smooth scroll to wizard container
   const goToStep = (nextStep: number) => {
@@ -87,12 +104,10 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
     }
     setStep(nextStep);
     setFormError('');
-    // Immediate scroll
-    scrollToWizard();
-    // Re-align after React DOM render and potential virtual keyboard collapse
-    if (typeof window !== 'undefined') {
+    // If step did not change (same step re-selected), re-align explicitly via requestAnimationFrame
+    if (nextStep === step && typeof window !== 'undefined') {
       requestAnimationFrame(() => {
-        setTimeout(scrollToWizard, 60);
+        scrollToWizard();
       });
     }
   };
@@ -286,6 +301,19 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
     return `https://wa.me/${branchPhone}?text=${encodeURIComponent(message)}`;
   };
 
+  const stepsList = useMemo(() => [
+    { num: 1, label: 'Sede y ubicación', desc: currentBranch.name },
+    { num: 2, label: 'Servicio y profesional', desc: currentService.name },
+    {
+      num: 3,
+      label: 'Fecha y horario',
+      desc: selectedTimeSlot ? `${selectedDate} • ${selectedTimeSlot} hs` : 'Por seleccionar',
+    },
+    { num: 4, label: 'Confirmación de datos', desc: 'Datos del cliente' },
+  ], [currentBranch.name, currentService.name, selectedDate, selectedTimeSlot]);
+
+  const activeStepItem = stepsList.find((s) => s.num === step) || stepsList[0];
+
   return (
     <section id="reservar" className="bg-[#ECE7DE] text-[#141210] py-16 lg:py-24 border-t border-[#141210]/25 overflow-x-hidden min-h-screen min-h-dvh flex flex-col justify-start">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -305,66 +333,96 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
         {/* Asymmetric Wizard Layout: 4 cols editorial sidebar / 8 cols wizard form */}
         <div ref={wizardRef} className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start scroll-mt-20">
           {/* Left Column: Progress & Real-time Booking Context */}
-          <div className="lg:col-span-4 space-y-6">
+          <div className="lg:col-span-4 space-y-4 lg:space-y-6">
             {/* Step Navigation Indicator */}
             {step < 5 && (
-              <div className="bg-[#DDD6C8]/40 border border-[#141210]/25 p-5 rounded-[2px] space-y-3">
-                <div className="text-xs font-medium tracking-wider text-[#141210]/60">
-                  Progreso del turno
+              <>
+                {/* Mobile Compact Progress Indicator (< md) */}
+                <div className="md:hidden bg-[#DDD6C8]/40 border border-[#141210]/25 p-3 mb-4 rounded-[2px]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-5 h-5 rounded-[2px] bg-[#141210] text-[#ECE7DE] font-medium text-[11px] flex items-center justify-center shrink-0">
+                        {step}
+                      </span>
+                      <div className="text-xs font-medium text-[#141210] truncate">
+                        Paso {step} de 4 <span className="text-[#141210]/40 font-normal">•</span> {activeStepItem.label}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {stepsList.map((s) => (
+                        <button
+                          key={s.num}
+                          type="button"
+                          disabled={step < s.num}
+                          onClick={() => goToStep(s.num)}
+                          aria-label={`Ir al paso ${s.num}: ${s.label}`}
+                          className="w-7 h-7 flex items-center justify-center -my-1 cursor-pointer disabled:cursor-not-allowed"
+                        >
+                          <span
+                            className={`w-2.5 h-2.5 rounded-[1px] transition-colors block ${
+                              step === s.num
+                                ? 'bg-[#141210]'
+                                : step > s.num
+                                ? 'bg-[#141210]/60 hover:bg-[#141210]'
+                                : 'bg-[#141210]/20'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  {[
-                    { num: 1, label: 'Sede y ubicación', desc: currentBranch.name },
-                    { num: 2, label: 'Servicio y profesional', desc: currentService.name },
-                    {
-                      num: 3,
-                      label: 'Fecha y horario',
-                      desc: selectedTimeSlot ? `${selectedDate} • ${selectedTimeSlot} hs` : 'Por seleccionar',
-                    },
-                    { num: 4, label: 'Confirmación de datos', desc: 'Datos del cliente' },
-                  ].map((s) => (
-                    <button
-                      key={s.num}
-                      type="button"
-                      disabled={step < s.num}
-                      onClick={() => goToStep(s.num)}
-                      className={`w-full text-left p-2.5 rounded-[2px] flex items-start gap-3 transition-colors cursor-pointer min-h-[44px] ${
-                        step === s.num
-                          ? 'bg-[#141210] text-[#ECE7DE]'
-                          : step > s.num
-                          ? 'bg-[#ECE7DE]/70 text-[#141210] hover:bg-[#ECE7DE]'
-                          : 'opacity-40 cursor-not-allowed text-[#141210]'
-                      }`}
-                    >
-                      <div
-                        className={`w-7 h-7 rounded-[2px] flex items-center justify-center font-medium text-xs shrink-0 ${
+
+                {/* Desktop Detailed Progress Sidebar (>= md) */}
+                <div className="hidden md:block bg-[#DDD6C8]/40 border border-[#141210]/25 p-5 rounded-[2px] space-y-3">
+                  <div className="text-xs font-medium tracking-wider text-[#141210]/60">
+                    Progreso del turno
+                  </div>
+                  <div className="space-y-2">
+                    {stepsList.map((s) => (
+                      <button
+                        key={s.num}
+                        type="button"
+                        disabled={step < s.num}
+                        onClick={() => goToStep(s.num)}
+                        className={`w-full text-left p-2.5 rounded-[2px] flex items-start gap-3 transition-colors cursor-pointer min-h-[44px] ${
                           step === s.num
-                            ? 'bg-[#ECE7DE] text-[#141210]'
-                            : step > s.num
                             ? 'bg-[#141210] text-[#ECE7DE]'
-                            : 'border border-[#141210]/30 text-[#141210]'
+                            : step > s.num
+                            ? 'bg-[#ECE7DE]/70 text-[#141210] hover:bg-[#ECE7DE]'
+                            : 'opacity-40 cursor-not-allowed text-[#141210]'
                         }`}
                       >
-                        {step > s.num ? <CheckCircle className="w-3.5 h-3.5" /> : s.num}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium leading-snug">{s.label}</div>
                         <div
-                          className={`text-[11px] truncate mt-0.5 ${
-                            step === s.num ? 'text-[#ECE7DE]/70' : 'text-[#141210]/60'
+                          className={`w-7 h-7 rounded-[2px] flex items-center justify-center font-medium text-xs shrink-0 ${
+                            step === s.num
+                              ? 'bg-[#ECE7DE] text-[#141210]'
+                              : step > s.num
+                              ? 'bg-[#141210] text-[#ECE7DE]'
+                              : 'border border-[#141210]/30 text-[#141210]'
                           }`}
                         >
-                          {s.desc}
+                          {step > s.num ? <CheckCircle className="w-3.5 h-3.5" /> : s.num}
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium leading-snug">{s.label}</div>
+                          <div
+                            className={`text-[11px] truncate mt-0.5 ${
+                              step === s.num ? 'text-[#ECE7DE]/70' : 'text-[#141210]/60'
+                            }`}
+                          >
+                            {s.desc}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
 
             {/* Quiet Editorial Guarantee Note */}
-            <div className="p-5 border border-[#141210]/25 rounded-[2px] bg-[#ECE7DE] space-y-2 text-xs text-[#141210]/70">
+            <div className="hidden md:block p-5 border border-[#141210]/25 rounded-[2px] bg-[#ECE7DE] space-y-2 text-xs text-[#141210]/70">
               <div className="font-serif font-bold text-sm text-[#141210]">Puntualidad rigurosa</div>
               <p className="leading-relaxed">
                 Cada turno inicia en el minuto pactado. En caso de demoras ajenas al cliente, se compensa la sesión sin costo adicional.
@@ -374,7 +432,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
 
           {/* Right Column: Active Step Interactive Form */}
           <div className="lg:col-span-8">
-            <div className="bg-[#DDD6C8]/40 border border-[#141210]/25 rounded-[2px] p-6 sm:p-8 min-h-[480px] flex flex-col justify-between">
+            <div ref={stepContentRef} className="bg-[#DDD6C8]/40 border border-[#141210]/25 rounded-[2px] p-6 sm:p-8 min-h-[480px] flex flex-col justify-between scroll-mt-20">
           {/* STEP 1: SUCURSAL SELECTION */}
           {step === 1 && (
             <div className="space-y-6 animate-fadeIn">
